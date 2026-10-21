@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FBX to VRMA Converter</title>
+  <title>FBX to VRMA Converter (Redesigned)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/all.min.js"></script>
 
+  <!-- Import map for Three.js & three-vrm-animation -->
   <script type="importmap">
     {
       "imports": {
@@ -17,243 +18,634 @@
     }
   </script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-center items-center p-4">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 font-sans select-none">
 
-  <div class="max-w-xl w-full bg-slate-800 rounded-xl shadow-2xl p-6 md:p-8 border border-slate-700">
-    <div class="text-center mb-6">
-      <div class="inline-flex items-center justify-center w-14 h-14 bg-indigo-600/20 text-indigo-400 rounded-full mb-3">
-        <i class="fa-solid fa-running text-2xl"></i>
+  <main class="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+    <!-- Header -->
+    <header class="text-center mb-6">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-500/10 text-indigo-400 rounded-2xl mb-4 border border-indigo-500/20 shadow-inner">
+        <i class="fa-solid fa-person-running text-3xl"></i>
       </div>
-      <h1 class="text-2xl font-bold text-white">FBX ➔ VRMA コンバーター</h1>
-      <p class="text-slate-400 text-sm mt-1">FBXファイルからモーションデータのみを抽出してVRMAへ変換します</p>
-    </div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">FBX ➔ VRMA Converter</h1>
+      <p class="text-slate-400 text-sm mt-2">FBXモーションデータをVRM 1.0規格のアニメーションデータ (.vrma) に自動変換します</p>
+    </header>
 
-    <div id="dropZone" class="border-2 border-dashed border-slate-600 hover:border-indigo-500 bg-slate-800/50 hover:bg-indigo-950/20 rounded-lg p-8 text-center cursor-pointer transition-all duration-200 group">
+    <!-- File Drop Zone & Hidden Input -->
+    <div class="space-y-4">
+      <!-- hidden input without restrictions, absolute position or label wrapper -->
       <input type="file" id="fileInput" accept=".fbx" class="hidden" />
-      <i class="fa-solid fa-file-arrow-up text-4xl text-slate-500 group-hover:text-indigo-400 mb-3 transition-colors"></i>
-      <p class="text-slate-300 font-medium">ここにFBXファイルをドロップ</p>
-      <p class="text-slate-500 text-xs mt-1">またはクリックしてファイルを選択</p>
-    </div>
 
-    <button id="convertBtn" disabled class="w-full mt-6 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium rounded-lg transition-colors flex items-center justify-center space-x-2 disabled:cursor-not-allowed">
-      <i class="fa-solid fa-download"></i>
-      <span>VRMAファイルを出力</span>
-    </button>
-
-    <div id="statusContainer" class="mt-4 p-4 rounded-lg bg-slate-900/50 border border-slate-700 hidden">
-      <div class="flex items-start space-x-3">
-        <div id="statusIcon" class="mt-0.5 text-indigo-400">
-          <i class="fa-solid fa-circle-notch fa-spin"></i>
-        </div>
-        <div class="flex-1">
-          <p id="statusTitle" class="text-sm font-semibold text-slate-200">処理中...</p>
-          <pre id="statusDetails" class="text-xs text-slate-400 mt-1 whitespace-pre-wrap font-mono"></pre>
+      <div id="dropZone" role="button" tabindex="0" aria-label="FBXファイルを選択またはドラッグ＆ドロップ" class="group relative border-2 border-dashed border-slate-700 hover:border-indigo-500 bg-slate-800/40 hover:bg-indigo-950/20 rounded-xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200">
+        <div class="pointer-events-none flex flex-col items-center justify-center space-y-3">
+          <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-indigo-600/20 text-slate-400 group-hover:text-indigo-400 flex items-center justify-center transition-all duration-200">
+            <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+          </div>
+          <div>
+            <p class="text-base font-semibold text-slate-200 group-hover:text-white transition-colors">FBXファイルをここへドラッグ＆ドロップ</p>
+            <p class="text-xs text-slate-500 mt-1">またはクリックしてファイルダイアログから選択</p>
+          </div>
         </div>
       </div>
+
+      <!-- File Status Badge -->
+      <div id="fileInfo" class="hidden flex items-center justify-between p-3.5 bg-slate-800/80 border border-slate-700/80 rounded-lg text-sm">
+        <div class="flex items-center space-x-3 overflow-hidden">
+          <i class="fa-solid fa-file-code text-indigo-400 text-lg flex-shrink-0"></i>
+          <span id="fileName" class="font-medium text-slate-200 truncate">sample.fbx</span>
+        </div>
+        <button id="clearFileBtn" class="text-slate-400 hover:text-rose-400 p-1 transition-colors flex-shrink-0" title="ファイルをクリア">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Convert Action Button -->
+      <button id="convertBtn" disabled class="w-full py-3.5 px-6 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:bg-slate-800 disabled:text-slate-600 text-white font-semibold rounded-xl shadow-lg transition-all duration-150 flex items-center justify-center space-x-2 disabled:cursor-not-allowed disabled:shadow-none">
+        <i class="fa-solid fa-bolt"></i>
+        <span>VRMAファイルに変換・ダウンロード</span>
+      </button>
     </div>
-  </div>
+
+    <!-- Live Execution Console & Progress -->
+    <section id="consoleSection" class="mt-6 pt-6 border-t border-slate-800/80">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+          <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-600"></span>
+          処理ログ
+        </span>
+        <span id="progressPercent" class="text-xs font-mono text-indigo-400 font-semibold hidden">0%</span>
+      </div>
+
+      <!-- Progress bar -->
+      <div id="progressBarBg" class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mb-3 hidden">
+        <div id="progressBar" class="h-full bg-indigo-500 w-0 transition-all duration-200"></div>
+      </div>
+
+      <div id="logConsole" class="w-full h-36 bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-slate-400 overflow-y-auto space-y-1.5 leading-relaxed">
+        <div class="text-slate-600 italic">待機中... FBXファイルを読み込むと処理ログが表示されます。</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ファイル選択UIはモジュール読込の成否に依存させない
+    (() => {
+      const input = document.getElementById('fileInput');
+      const zone = document.getElementById('dropZone');
+      if (!input || !zone) return;
+
+      const sendFile = (file) => {
+        if (!file) return;
+        document.dispatchEvent(new CustomEvent('fbx-file-selected', { detail: file }));
+      };
+
+      zone.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          input.click();
+        }
+      });
+
+      zone.addEventListener('click', (event) => {
+        // ボタン等を追加した場合、そのクリックではダイアログを開かない
+        if (event.target.closest('button, a')) return;
+        input.click();
+      });
+
+      input.addEventListener('change', () => {
+        if (input.files && input.files.length) sendFile(input.files[0]);
+      });
+
+      ['dragenter', 'dragover'].forEach((type) => {
+        zone.addEventListener(type, (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+          zone.classList.add('border-indigo-500', 'bg-indigo-950/40');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach((type) => {
+        zone.addEventListener(type, (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          zone.classList.remove('border-indigo-500', 'bg-indigo-950/40');
+        });
+      });
+
+      zone.addEventListener('drop', (event) => {
+        const files = event.dataTransfer && event.dataTransfer.files;
+        if (files && files.length) sendFile(files[0]);
+      });
+
+      // ブラウザがファイルを開いたり別ページへ移動したりするのを防ぐ
+      ['dragenter', 'dragover', 'drop'].forEach((type) => {
+        document.addEventListener(type, (event) => {
+          event.preventDefault();
+        });
+      });
+    })();
+  </script>
 
   <script type="module">
     import * as THREE from 'three';
     import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
     import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-    import { VRMAnimationBuilder } from '@pixiv/three-vrm-animation';
+    // VRMA is serialized as GLB + VRMC_vrm_animation extension; no VRMAnimationBuilder exists in v2.0.0.
 
+    // UI Element References
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const clearFileBtn = document.getElementById('clearFileBtn');
     const convertBtn = document.getElementById('convertBtn');
-    const statusContainer = document.getElementById('statusContainer');
-    const statusIcon = document.getElementById('statusIcon');
-    const statusTitle = document.getElementById('statusTitle');
-    const statusDetails = document.getElementById('statusDetails');
+    const logConsole = document.getElementById('logConsole');
+    const statusDot = document.getElementById('statusDot');
+    const progressBarBg = document.getElementById('progressBarBg');
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
 
-    let loadedFbx = null;
+    let currentFile = null;
+    let loadedFbxObject = null;
 
-    const boneMapping = {
-      'mixamorigHips': 'hips',
-      'mixamorigSpine': 'spine',
-      'mixamorigSpine1': 'chest',
-      'mixamorigSpine2': 'upperChest',
-      'mixamorigNeck': 'neck',
-      'mixamorigHead': 'head',
-      'mixamorigLeftShoulder': 'leftShoulder',
-      'mixamorigLeftArm': 'leftUpperArm',
-      'mixamorigLeftForeArm': 'leftLowerArm',
-      'mixamorigLeftHand': 'leftHand',
-      'mixamorigRightShoulder': 'rightShoulder',
-      'mixamorigRightArm': 'rightUpperArm',
-      'mixamorigRightForeArm': 'rightLowerArm',
-      'mixamorigRightHand': 'rightHand',
-      'mixamorigLeftUpLeg': 'leftUpperLeg',
-      'mixamorigLeftLeg': 'leftLowerLeg',
-      'mixamorigLeftFoot': 'leftFoot',
-      'mixamorigLeftToeBase': 'leftToes',
-      'mixamorigRightUpLeg': 'rightUpperLeg',
-      'mixamorigRightLeg': 'rightLowerLeg',
-      'mixamorigRightFoot': 'rightFoot',
-      'mixamorigRightToeBase': 'rightToes'
-    };
+    // ログ・ステータス表示関数（元ファイルで未定義だったため追加）
+    function clearLog() {
+      logConsole.replaceChildren();
+    }
 
-    dropZone.addEventListener('click', (e) => {
-      // fileInput 自体のクリック時は再発火を防止
-      if (e.target !== fileInput) {
-        fileInput.click();
-      }
-    });
+    function log(type, message) {
+      const row = document.createElement('div');
+      const colors = {
+        info: 'text-slate-300',
+        success: 'text-emerald-400',
+        warn: 'text-amber-300',
+        error: 'text-rose-400'
+      };
+      row.className = colors[type] || colors.info;
+      row.textContent = `[${new Date().toLocaleTimeString('ja-JP')}] ${message}`;
+      logConsole.appendChild(row);
+      logConsole.scrollTop = logConsole.scrollHeight;
+    }
 
-    fileInput.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-
-    dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropZone.classList.add('border-indigo-500', 'bg-indigo-950/20');
-    });
-
-    dropZone.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/20');
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/20');
-      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        handleFile(e.dataTransfer.files[0]);
-      }
-    });
-
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files.length > 0) {
-        handleFile(e.target.files[0]);
-      }
-    });
-
-    function showStatus(type, title, details = '') {
-      statusContainer.classList.remove('hidden');
-      statusTitle.innerText = title;
-      statusDetails.innerText = details;
-
-      if (type === 'loading') {
-        statusIcon.className = 'mt-0.5 text-indigo-400';
-        statusIcon.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-      } else if (type === 'success') {
-        statusIcon.className = 'mt-0.5 text-emerald-400';
-        statusIcon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
-      } else if (type === 'error') {
-        statusIcon.className = 'mt-0.5 text-rose-400';
-        statusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+    function setStatus(state, percent) {
+      const dotColors = {
+        idle: 'bg-slate-600',
+        loading: 'bg-indigo-400',
+        success: 'bg-emerald-400',
+        error: 'bg-rose-500'
+      };
+      statusDot.className = `w-2 h-2 rounded-full ${dotColors[state] || dotColors.idle}`;
+      if (typeof percent === 'number') {
+        progressBarBg.classList.remove('hidden');
+        progressPercent.classList.remove('hidden');
+        progressBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+        progressPercent.textContent = `${Math.round(Math.max(0, Math.min(100, percent)))}%`;
+      } else if (state === 'success') {
+        progressBarBg.classList.remove('hidden');
+        progressPercent.classList.remove('hidden');
+        progressBar.style.width = '100%';
+        progressPercent.textContent = '100%';
+      } else if (state === 'idle') {
+        progressBarBg.classList.add('hidden');
+        progressPercent.classList.add('hidden');
+        progressBar.style.width = '0%';
+        progressPercent.textContent = '0%';
+      } else if (state === 'error') {
+        progressBarBg.classList.add('hidden');
+        progressPercent.classList.add('hidden');
       }
     }
 
-    function handleFile(file) {
+
+    // ファイル選択UI（通常スクリプト）から受け取る
+    document.addEventListener('fbx-file-selected', (event) => {
+      processSelectedFile(event.detail);
+    });
+
+    // Reset file input value when clearing to ensure 'change' event fires even for same file
+    clearFileBtn.addEventListener('click', () => {
+      resetState();
+      log('info', 'ファイル選択を解除しました。');
+    });
+
+    function resetState() {
+      currentFile = null;
+      loadedFbxObject = null;
+      fileInput.value = '';
+      fileName.innerText = '';
+      fileInfo.classList.add('hidden');
+      convertBtn.disabled = true;
+      setStatus('idle');
+    }
+
+    function processSelectedFile(file) {
       if (!file) return;
 
       if (!file.name.toLowerCase().endsWith('.fbx')) {
-        showStatus('error', 'フォーマットエラー', 'FBXファイル（.fbx）を選択してください。');
-        convertBtn.disabled = true;
-        loadedFbx = null;
-        fileInput.value = '';
+        clearLog();
+        log('error', `選択されたファイル (${file.name}) はFBX形式ではありません。拡張子 .fbx のファイルを選択してください。`);
+        resetState();
+        setStatus('error');
         return;
       }
 
-      showStatus('loading', 'ファイル解析中', 'FBXデータを読み込んでいます...');
-      convertBtn.disabled = true;
-      loadedFbx = null;
+      currentFile = file;
+      fileName.innerText = file.name;
+      fileInfo.classList.remove('hidden');
+      clearLog();
 
-      // Blob URL を使用して FBXLoader でロード
-      const blobUrl = URL.createObjectURL(file);
-      const loader = new FBXLoader();
+      log('info', `ファイルを選択しました: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+      log('info', 'FBXデータのパース処理を開始します...');
+      setStatus('loading', 20);
 
-      loader.load(
-        blobUrl,
-        (fbxGroup) => {
-          URL.revokeObjectURL(blobUrl);
-          loadedFbx = fbxGroup;
+      const reader = new FileReader();
 
-          if (loadedFbx.animations && loadedFbx.animations.length > 0) {
-            showStatus(
-              'success', 
-              '解析成功', 
-              `ファイル名: ${file.name}\nアニメーション件数: ${loadedFbx.animations.length}件`
-            );
+      reader.onload = function (e) {
+        try {
+          setStatus('loading', 50);
+          const buffer = e.target.result;
+          const loader = new FBXLoader();
+
+          // Execute Three.js FBX parsing
+          const fbx = loader.parse(buffer, '');
+          loadedFbxObject = fbx;
+
+          if (fbx.animations && fbx.animations.length > 0) {
+            setStatus('success');
+            log('success', `FBXのパースに成功しました。`);
+            log('info', `検出されたアニメーションクリップ数: ${fbx.animations.length}`);
+            fbx.animations.forEach((anim, idx) => {
+              log('info', ` - Track [${idx}]: "${anim.name}" (長: ${anim.duration.toFixed(2)}秒, トラック数: ${anim.tracks.length})`);
+            });
             convertBtn.disabled = false;
           } else {
-            showStatus('error', 'アニメーション未検出', '選択されたFBX内にキーフレームデータが存在しません。');
+            setStatus('error');
+            log('error', 'FBX内にアニメーションキーフレームが検出されませんでした。アニメーションデータが含まれているFBXを選択してください。');
             convertBtn.disabled = true;
           }
-          fileInput.value = '';
-        },
-        (progress) => {
-          if (progress.lengthComputable) {
-            const percent = Math.round((progress.loaded / progress.total) * 100);
-            showStatus('loading', 'ファイル解析中', `読み込み進捗: ${percent}%`);
-          }
-        },
-        (err) => {
-          URL.revokeObjectURL(blobUrl);
+        } catch (err) {
           console.error(err);
-          showStatus('error', '解析エラー', `FBXのロードに失敗しました。\n${err.message || err}`);
+          setStatus('error');
+          log('error', `FBX解析エラー: ${err.message || err}`);
+          log('warn', '※テキスト(ASCII)形式の古すぎるFBXや、特殊なノード構造が含まれるFBXは標準パッサーで読み込めない場合があります。');
           convertBtn.disabled = true;
-          fileInput.value = '';
         }
-      );
+      };
+
+      reader.onerror = function (err) {
+        console.error(err);
+        setStatus('error');
+        log('error', 'ファイルの読み込み中にブラウザエラーが発生しました。');
+        convertBtn.disabled = true;
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    // FBX/Mixamo等のボーン名をVRM Humanoid名へ対応付ける
+    const BONE_MAPPING_TABLE = {
+      hips: 'hips', pelvis: 'hips', root: 'hips',
+      spine: 'spine', spine1: 'chest', spine2: 'upperChest',
+      chest: 'chest', upperchest: 'upperChest', neck: 'neck', head: 'head',
+      leftshoulder: 'leftShoulder', rightshoulder: 'rightShoulder',
+      leftarm: 'leftUpperArm', rightarm: 'rightUpperArm',
+      leftforearm: 'leftLowerArm', rightforearm: 'rightLowerArm',
+      lefthand: 'leftHand', righthand: 'rightHand',
+      leftupleg: 'leftUpperLeg', rightupleg: 'rightUpperLeg',
+      leftleg: 'leftLowerLeg', rightleg: 'rightLowerLeg',
+      leftfoot: 'leftFoot', rightfoot: 'rightFoot',
+      lefttoebase: 'leftToes', righttoebase: 'rightToes',
+      lefttoe: 'leftToes', righttoe: 'rightToes',
+      leftthumb1: 'leftThumbMetacarpal', leftthumb2: 'leftThumbProximal', leftthumb3: 'leftThumbDistal',
+      rightthumb1: 'rightThumbMetacarpal', rightthumb2: 'rightThumbProximal', rightthumb3: 'rightThumbDistal',
+      leftindex1: 'leftIndexProximal', leftindex2: 'leftIndexIntermediate', leftindex3: 'leftIndexDistal',
+      rightindex1: 'rightIndexProximal', rightindex2: 'rightIndexIntermediate', rightindex3: 'rightIndexDistal',
+      leftmiddle1: 'leftMiddleProximal', leftmiddle2: 'leftMiddleIntermediate', leftmiddle3: 'leftMiddleDistal',
+      rightmiddle1: 'rightMiddleProximal', rightmiddle2: 'rightMiddleIntermediate', rightmiddle3: 'rightMiddleDistal',
+      leftring1: 'leftRingProximal', leftring2: 'leftRingIntermediate', leftring3: 'leftRingDistal',
+      rightring1: 'rightRingProximal', rightring2: 'rightRingIntermediate', rightring3: 'rightRingDistal',
+      leftlittle1: 'leftLittleProximal', leftlittle2: 'leftLittleIntermediate', leftlittle3: 'leftLittleDistal',
+      rightlittle1: 'rightLittleProximal', rightlittle2: 'rightLittleIntermediate', rightlittle3: 'rightLittleDistal'
+    };
+
+    // Normalize bone names (remove prefixes like mixamorig:, Armature/, etc.)
+    function normalizeBoneName(rawName) {
+      if (!rawName) return '';
+      let clean = rawName;
+      // Strip common prefixes
+      clean = clean.replace(/^.*[:\/]/, ''); // Strip namespaces or hierarchy
+      clean = clean.replace(/^mixamorig/i, ''); // Strip mixamorig
+      clean = clean.replace(/[^a-zA-Z0-9]/g, ''); // Strip non-alphanumeric
+      return clean.toLowerCase();
+    }
+
+    // GLB JSON chunkへVRMC_vrm_animation拡張を付与する
+    function addVrmaExtension(glbBuffer, humanBoneNodeMap) {
+      const source = glbBuffer instanceof ArrayBuffer
+        ? glbBuffer
+        : glbBuffer.buffer.slice(glbBuffer.byteOffset, glbBuffer.byteOffset + glbBuffer.byteLength);
+      const view = new DataView(source);
+      if (view.getUint32(0, true) !== 0x46546c67) {
+        throw new Error('GLTFExporterがGLB形式のデータを返しませんでした。');
+      }
+
+      const oldTotalLength = view.getUint32(8, true);
+      let offset = 12;
+      let jsonChunk = null;
+      const otherChunks = [];
+      while (offset + 8 <= oldTotalLength) {
+        const length = view.getUint32(offset, true);
+        const type = view.getUint32(offset + 4, true);
+        const chunkStart = offset + 8;
+        const chunk = source.slice(chunkStart, chunkStart + length);
+        if (type === 0x4e4f534a) {
+          jsonChunk = chunk;
+        } else {
+          otherChunks.push({ type, data: chunk });
+        }
+        offset = chunkStart + length;
+      }
+      if (!jsonChunk) throw new Error('GLB内にJSONチャンクがありません。');
+
+      const decoder = new TextDecoder();
+      const jsonText = decoder.decode(jsonChunk).replace(/[\u0000\u0020]+$/g, '');
+      const gltf = JSON.parse(jsonText);
+      gltf.extensionsUsed = Array.from(new Set([...(gltf.extensionsUsed || []), 'VRMC_vrm_animation']));
+      gltf.extensionsRequired = Array.from(new Set([...(gltf.extensionsRequired || []), 'VRMC_vrm_animation']));
+      gltf.extensions = gltf.extensions || {};
+      gltf.extensions.VRMC_vrm_animation = {
+        specVersion: '1.0',
+        humanoid: {
+          humanBones: Object.fromEntries(
+            Object.entries(humanBoneNodeMap).map(([boneName, nodeIndex]) => [boneName, { node: nodeIndex }])
+          )
+        }
+      };
+
+      const encoder = new TextEncoder();
+      let newJsonBytes = encoder.encode(JSON.stringify(gltf));
+      const jsonPadding = (4 - (newJsonBytes.length % 4)) % 4;
+      if (jsonPadding) {
+        const padded = new Uint8Array(newJsonBytes.length + jsonPadding);
+        padded.set(newJsonBytes);
+        padded.fill(0x20, newJsonBytes.length);
+        newJsonBytes = padded;
+      }
+
+      let totalLength = 12 + 8 + newJsonBytes.length;
+      for (const chunk of otherChunks) totalLength += 8 + chunk.data.byteLength;
+      const result = new ArrayBuffer(totalLength);
+      const outView = new DataView(result);
+      const outBytes = new Uint8Array(result);
+      outView.setUint32(0, 0x46546c67, true); // glTF magic
+      outView.setUint32(4, 2, true);
+      outView.setUint32(8, totalLength, true);
+      outView.setUint32(12, newJsonBytes.length, true);
+      outView.setUint32(16, 0x4e4f534a, true); // JSON chunk
+      outBytes.set(newJsonBytes, 20);
+      let writeOffset = 20 + newJsonBytes.length;
+      for (const chunk of otherChunks) {
+        outView.setUint32(writeOffset, chunk.data.byteLength, true);
+        outView.setUint32(writeOffset + 4, chunk.type, true);
+        outBytes.set(new Uint8Array(chunk.data), writeOffset + 8);
+        writeOffset += 8 + chunk.data.byteLength;
+      }
+      return result;
     }
 
     convertBtn.addEventListener('click', async () => {
-      if (!loadedFbx || !loadedFbx.animations || !loadedFbx.animations.length) return;
+      if (!loadedFbxObject || !loadedFbxObject.animations || loadedFbxObject.animations.length === 0) {
+        log('error', '変換可能なFBXアニメーションがありません。FBXを読み込み直してください。');
+        return;
+      }
 
-      showStatus('loading', 'VRMA生成中', 'モーションデータをVRM規格構造にマッピングしています...');
-      
+      convertBtn.disabled = true;
       try {
-        const clip = loadedFbx.animations[0];
-        const builder = new VRMAnimationBuilder();
-        
-        clip.tracks.forEach(track => {
-          const trackNameParts = track.name.split('.');
-          const rawBoneName = trackNameParts[0].replace('mixamorig:', 'mixamorig'); 
-          const propertyName = trackNameParts[1];
+        setStatus('loading', 10);
+        log('info', '変換処理を開始します。');
+        // FBX may contain multiple AnimationStacks; the first one can be empty.
+        // Choose the first clip that actually has usable keyed tracks instead of blindly using [0].
+        const clipDiagnostics = loadedFbxObject.animations.map((clip, index) => ({
+          clip, index,
+          trackCount: Array.isArray(clip.tracks) ? clip.tracks.length : 0,
+          keyedTrackCount: Array.isArray(clip.tracks)
+            ? clip.tracks.filter(t => t && t.times && t.values && t.times.length > 0 && t.values.length > 0).length
+            : 0
+        }));
+        clipDiagnostics.forEach(({clip, index, trackCount, keyedTrackCount}) => {
+          log('info', `クリップ診断 [${index}]「${clip.name || '(名称なし)'}」: トラック=${trackCount}, キーあり=${keyedTrackCount}, 長さ=${Number(clip.duration || 0).toFixed(2)}秒`);
+        });
+        const selectedClipInfo = clipDiagnostics.find(item => item.keyedTrackCount > 0);
+        if (!selectedClipInfo) {
+          const summary = clipDiagnostics.map(item => `${item.index}:${item.trackCount}トラック/${item.keyedTrackCount}キーあり`).join('、');
+          throw new Error(`FBXLoaderがキーフレームを持つトラックを生成できませんでした（${summary || 'クリップなし'}）。FBX内にAnimationCurveがない、またはFBXのアニメーション構造が未対応の可能性があります。元のFBXを確認してください。`);
+        }
+        const sourceClip = selectedClipInfo.clip;
+        log('info', `変換対象クリップ: [${selectedClipInfo.index}] ${sourceClip.name || '(名称なし)'}`);
 
-          const humanoidBoneName = boneMapping[rawBoneName];
-
-          if (humanoidBoneName) {
-            if (propertyName === 'quaternion') {
-              builder.addNodeTrack(humanoidBoneName, 'rotation', track);
-            } else if (propertyName === 'position' && humanoidBoneName === 'hips') {
-              builder.addNodeTrack(humanoidBoneName, 'translation', track);
-            }
+        // Build VRMA nodes from the FBX's actual skeleton, preserving rest transforms
+        // and parent-child hierarchy. Flat identity nodes can produce invalid humanoid
+        // retargeting and may make the target avatar disappear when the clip is applied.
+        const scene = new THREE.Scene();
+        scene.name = 'VRMA_Root';
+        const boneNodes = new Map();
+        const sourceBoneByHumanoid = new Map();
+        loadedFbxObject.updateMatrixWorld(true);
+        loadedFbxObject.traverse((obj) => {
+          if (!obj.isBone && !obj.type?.includes('Bone')) return;
+          const normalized = normalizeBoneName(obj.name);
+          const humanoid = BONE_MAPPING_TABLE[normalized];
+          if (humanoid && !sourceBoneByHumanoid.has(humanoid)) {
+            sourceBoneByHumanoid.set(humanoid, obj);
           }
         });
 
-        const vrmAnimation = builder.build();
+        // Create one glTF node per mapped source bone and retain its rest pose.
+        for (const [humanoid, sourceBone] of sourceBoneByHumanoid) {
+          const node = new THREE.Object3D();
+          node.name = humanoid;
+          node.position.copy(sourceBone.position);
+          node.quaternion.copy(sourceBone.quaternion);
+          node.scale.copy(sourceBone.scale);
+          boneNodes.set(humanoid, node);
+        }
+        // Parent each node to its nearest mapped humanoid ancestor.
+        for (const [humanoid, sourceBone] of sourceBoneByHumanoid) {
+          let ancestor = sourceBone.parent;
+          let parentNode = null;
+          while (ancestor && !parentNode) {
+            for (const [parentHumanoid, candidate] of sourceBoneByHumanoid) {
+              if (candidate === ancestor) {
+                parentNode = boneNodes.get(parentHumanoid);
+                break;
+              }
+            }
+            ancestor = ancestor.parent;
+          }
+          if (parentNode) parentNode.add(boneNodes.get(humanoid));
+          else scene.add(boneNodes.get(humanoid));
+        }
 
+        // If a mapped source bone is absent, it is deliberately not fabricated as an
+        // identity node; only bones that really exist in the FBX are exported.
+        const animationTracks = [];
+        let skippedTracksCount = 0;
+        const unmappedNames = new Set();
+
+        sourceClip.tracks.forEach((track) => {
+          // Ignore malformed/empty tracks; some FBX exporters emit placeholder curves.
+          if (!track || !track.times || !track.values || track.times.length === 0 || track.values.length === 0) {
+            skippedTracksCount++;
+            unmappedNames.add(track && track.name ? `${track.name} (空トラック)` : '(名前なし/空トラック)');
+            return;
+          }
+          const dot = track.name.lastIndexOf('.');
+          if (dot < 1) {
+            skippedTracksCount++;
+            unmappedNames.add(track.name);
+            return;
+          }
+          const rawNodeName = track.name.slice(0, dot);
+          const propertyName = track.name.slice(dot + 1);
+          const normalizedNode = normalizeBoneName(rawNodeName);
+          const humanoidBoneName = BONE_MAPPING_TABLE[normalizedNode];
+
+          if (!humanoidBoneName) {
+            skippedTracksCount++;
+            unmappedNames.add(rawNodeName);
+            return;
+          }
+
+          let targetPath = null;
+          let TrackConstructor = null;
+          if (propertyName === 'quaternion') {
+            targetPath = 'quaternion';
+            TrackConstructor = THREE.QuaternionKeyframeTrack;
+          } else if (propertyName === 'position' && humanoidBoneName === 'hips') {
+            targetPath = 'position';
+            TrackConstructor = THREE.VectorKeyframeTrack;
+          } else {
+            skippedTracksCount++;
+            return;
+          }
+
+          if (!boneNodes.has(humanoidBoneName)) {
+            skippedTracksCount++;
+            unmappedNames.add(`${rawNodeName} (対応するFBXボーンなし)`);
+            return;
+          }
+
+          animationTracks.push(new TrackConstructor(
+            `${humanoidBoneName}.${targetPath}`,
+            Array.from(track.times),
+            Array.from(track.values)
+          ));
+        });
+
+        const requiredBones = ['hips', 'spine', 'head'];
+        const missingRequired = requiredBones.filter((name) => !boneNodes.has(name));
+        log('info', `変換対象トラック: ${animationTracks.length} / スキップ: ${skippedTracksCount}`);
+        if (unmappedNames.size) {
+          log('warn', `未対応ボーン例: ${Array.from(unmappedNames).slice(0, 10).join(', ')}`);
+        }
+        if (!boneNodes.has('hips')) {
+          throw new Error('hips（腰）ボーンが検出されません。FBXのボーン名を確認してください。');
+        }
+        if (animationTracks.length === 0) {
+          throw new Error('対応する回転・腰位置トラックがありません。');
+        }
+        if (missingRequired.length) {
+          log('warn', `VRM互換性のため確認推奨のボーン: ${missingRequired.join(', ')}`);
+        }
+
+        setStatus('loading', 40);
+        const convertedClip = new THREE.AnimationClip(sourceClip.name || 'VRMA_Motion', sourceClip.duration, animationTracks);
         const exporter = new GLTFExporter();
-        exporter.parse(
-          vrmAnimation.scene,
-          (gltf) => {
-            const blob = new Blob([gltf], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'motion.vrma';
-            a.click();
-            URL.revokeObjectURL(url);
-            showStatus('success', '出力完了', 'VRMAファイル（motion.vrma）を出力・保存しました。');
-          },
-          (error) => {
-            console.error(error);
-            showStatus('error', 'エクスポートエラー', 'GLTF/VRMAのエクスポート処理に失敗しました。');
-          },
-          { binary: true }
-        );
+        log('info', 'glTFアニメーションデータを書き出しています...');
 
+        const glbBuffer = await new Promise((resolve, reject) => {
+          exporter.parse(
+            scene,
+            resolve,
+            reject,
+            { binary: true, animations: [convertedClip] }
+          );
+        });
+
+        setStatus('loading', 75);
+        const nodeIndexByName = new Map();
+        // GLTFExporter preserves the names on these nodes; extract them from the GLB JSON chunk.
+        const glbView = new DataView(glbBuffer);
+        let glbOffset = 12;
+        let gltfJson = null;
+        while (glbOffset + 8 <= glbView.getUint32(8, true)) {
+          const chunkLength = glbView.getUint32(glbOffset, true);
+          const chunkType = glbView.getUint32(glbOffset + 4, true);
+          if (chunkType === 0x4e4f534a) {
+            gltfJson = JSON.parse(new TextDecoder().decode(glbBuffer.slice(glbOffset + 8, glbOffset + 8 + chunkLength)).replace(/[\u0000\u0020]+$/g, ''));
+            break;
+          }
+          glbOffset += 8 + chunkLength;
+        }
+        if (!gltfJson || !Array.isArray(gltfJson.nodes)) {
+          throw new Error('書き出したGLBからノード情報を取得できませんでした。');
+        }
+        gltfJson.nodes.forEach((node, index) => {
+          if (node.name) nodeIndexByName.set(node.name, index);
+        });
+
+        const humanBoneNodeMap = {};
+        for (const boneName of boneNodes.keys()) {
+          const nodeIndex = nodeIndexByName.get(boneName);
+          if (nodeIndex === undefined) {
+            throw new Error(`書き出しノード「${boneName}」が見つかりません。`);
+          }
+          humanBoneNodeMap[boneName] = nodeIndex;
+        }
+
+        const vrmaBuffer = addVrmaExtension(glbBuffer, humanBoneNodeMap);
+        const blob = new Blob([vrmaBuffer], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const baseName = currentFile ? currentFile.name.replace(/\.[^/.]+$/, '') : 'motion';
+        a.href = url;
+        a.download = `${baseName}.vrma`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+        setStatus('success', 100);
+        log('success', `VRMAファイルの書き出しを開始しました: ${baseName}.vrma`);
+        log('warn', '自動生成したVRMAは、利用するVRMアプリで読み込み確認してください。骨名や座標系が異なるFBXでは調整が必要な場合があります。');
       } catch (err) {
-        console.error(err);
-        showStatus('error', '変換エラー', `VRMA変換中にエラーが発生しました。\n${err.message}`);
+        console.error('VRMA conversion failed:', err);
+        setStatus('error');
+        log('error', `変換失敗: ${err && err.message ? err.message : String(err)}`);
+        log('warn', '外部ライブラリの読込エラーはF12キーのConsoleで確認できます。');
+      } finally {
+        convertBtn.disabled = false;
       }
+    });
+
+    log('info', 'アプリケーションの準備が完了しました。');
+  </script>
+  <script>
+    window.addEventListener('error', (event) => {
+      const target = document.getElementById('logConsole');
+      if (!target || !event.message) return;
+      const row = document.createElement('div');
+      row.className = 'text-rose-400';
+      row.textContent = 'JavaScriptエラー: ' + event.message;
+      target.appendChild(row);
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      const target = document.getElementById('logConsole');
+      if (!target) return;
+      const row = document.createElement('div');
+      row.className = 'text-rose-400';
+      row.textContent = '非同期処理エラー: ' + (event.reason && event.reason.message ? event.reason.message : String(event.reason));
+      target.appendChild(row);
     });
   </script>
 </body>
